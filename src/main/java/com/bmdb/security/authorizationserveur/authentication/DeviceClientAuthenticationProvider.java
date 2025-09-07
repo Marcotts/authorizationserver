@@ -32,14 +32,7 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.web.OAuth2ClientAuthenticationFilter;
 import org.springframework.util.Assert;
 
-/**
- * @author Joe Grandja
- * @author Steve Riesenberg
- * @since 1.1
- * @see DeviceClientAuthenticationToken
- * @see DeviceClientAuthenticationConverter
- * @see OAuth2ClientAuthenticationFilter
- */
+
 public final class DeviceClientAuthenticationProvider implements AuthenticationProvider {
 	private static final String ERROR_URI = "https://datatracker.ietf.org/doc/html/rfc6749#section-3.2.1";
 	private final Log logger = LogFactory.getLog(getClass());

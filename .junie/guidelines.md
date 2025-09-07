@@ -21,7 +21,7 @@ This document provides guidelines for developing and working with the Authorizat
    ```
    mvnw spring-boot:run
    ```
-2. The authorization server will be available at `http://localhost:8080`
+2. The authorization server will be available at `http://localhost:9005`
 
 ### Configuration
 The application uses Spring Boot's configuration system. Key configuration files:

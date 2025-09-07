@@ -31,11 +31,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
-/**
- * @author Joe Grandja
- * @author Steve Riesenberg
- * @since 1.1
- */
+
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
 public class DefaultSecurityConfig {
@@ -46,7 +42,7 @@ public class DefaultSecurityConfig {
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize
-					.requestMatchers("/assets/**", "/login").permitAll()
+					.requestMatchers("/", "/error","/assets/**", "/login").permitAll()
 					.anyRequest().authenticated()
 			)
 			.formLogin(formLogin ->
