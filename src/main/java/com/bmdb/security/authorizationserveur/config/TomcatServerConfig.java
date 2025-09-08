@@ -36,12 +36,17 @@ public class TomcatServerConfig {
 		return (tomcat) -> tomcat.addAdditionalTomcatConnectors(createHttpConnector());
 	}
 
+    //- **Port principal (HTTPS)** : `9000` (défini dans application.properties)
+    //- **Port HTTP additionnel** : `8080` (défini dans TomcatServerConfig)
+    //- **Redirection HTTP vers HTTPS** : de `8080` vers `9000`
+
 	private Connector createHttpConnector() {
 		Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
 		connector.setScheme("http");
-		connector.setPort(9000);
+		connector.setPort(9000); // Port HTTP (au lieu de 9000)
 		connector.setSecure(false);
-		connector.setRedirectPort(9443);
+		connector.setRedirectPort(9443); // Redirige vers le port HTTPS principal au lieu de 9443
+
 		return connector;
 	}
 
