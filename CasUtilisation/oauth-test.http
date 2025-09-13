@@ -1,0 +1,171 @@
+###| Grant Type                                     | Utilisation |
+###| `authorization_code`                           | **Applications web** - Échange d'un code d'autorisation contre un token |
+###| `client_credentials`                           | **Service-à-service** - Authentification directe du client |
+###| `refresh_token`                                | **Renouvellement** - Obtenir un nouveau token avec un refresh token |
+###| `urn:ietf:params:oauth:grant-type:device_code` | **Appareils IoT** - Flux pour appareils sans navigateur |
+
+### 1. Device Code Flow
+POST http://localhost:8080/oauth2/device_authorization
+Content-Type: application/x-www-form-urlencoded
+
+client_id=device-messaging-client&scope=message.read%20message.write
+
+> {%
+    client.global.set("device_code", response.body.device_code);
+    client.global.set("user_code", response.body.user_code);
+    client.log("User Code: " + response.body.user_code);
+    client.log("Aller sur: " + response.body.verification_uri);
+    client.log("Ou aller directement sur: " + response.body.verification_uri_complete);
+%}
+
+
+
+### 2. Device Code Flow - Étape 2: Récupération du token
+POST http://localhost:9000/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code={{device_code}}&client_id=device-messaging-client
+
+> {%
+    if (response.body && response.body.access_token) {
+        client.global.set("auth_token", response.body.access_token);
+        client.log("✅ Token Device Flow extrait: " + response.body.access_token.substring(0, 50) + "...");
+    } else if (response.body && response.body.error) {
+        client.log("⏳ " + response.body.error + ": " + (response.body.error_description || "En attente d'autorisation"));
+    }
+%}
+
+
+
+### 2. Authorization Code Flow - Étape 2: Échange du code contre un token
+POST http://localhost:9000/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic bWVzc2FnaW5nLWNsaWVudDpzZWNyZXQ=
+
+grant_type=authorization_code&code={{user_code}}&redirect_uri=http://127.0.0.1:8080/login/oauth2/code/messaging-client-oidc
+
+> {%
+    // Extraire le token d'accès et le stocker
+    if (response.body && response.body.access_token) {
+        client.global.set("auth_token", response.body.access_token);
+        client.global.set("refresh_token", response.body.refresh_token);
+
+        // Calculer l'expiration du token
+        const expiresIn = response.body.expires_in || 300; // 5 minutes par défaut
+        const expirationTime = Date.now() + (expiresIn * 1000);
+        client.global.set("token_expires_at", expirationTime);
+
+        client.log("✅ Token Authorization Code extrait: " + response.body.access_token.substring(0, 50) + "...");
+        client.log("🔄 Refresh token: " + (response.body.refresh_token ? "Disponible" : "Non disponible"));
+        client.log("⏰ Expire dans: " + expiresIn + " secondes");
+    } else {
+        client.log("❌ Erreur: Aucun token reçu");
+    }
+%}
+
+
+
+### 3. Alternative : Client Credentials (plus simple pour les tests)
+POST http://localhost:9000/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic bWVzc2FnaW5nLWNsaWVudDpzZWNyZXQ=
+
+grant_type=client_credentials&scope=message.read%20message.write
+
+### 4. Device Code Flow - Étape 1
+POST http://localhost:9000/oauth2/device_authorization
+Content-Type: application/x-www-form-urlencoded
+
+client_id=device-messaging-client&scope=message.read%20message.write
+
+### 5. Device Code Flow - Étape 2 (après avoir utilisé le user_code)
+POST http://localhost:9000/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code=DEVICE_CODE_RECU&client_id=device-messaging-client
+
+
+####################################################################################
+### 1 Séquence
+### Obtenir un token et l'extraire automatiquement
+POST http://localhost:9000/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic bWVzc2FnaW5nLWNsaWVudDpzZWNyZXQ=
+
+grant_type=client_credentials&scope=message.read%20message.write
+
+> {%
+    client.global.set("auth_token", response.body.access_token);
+    client.log("Token extrait: " + response.body.access_token);
+%}
+
+
+
+### 2 Sequence
+GET http://localhost:8080/api/test
+Authorization: Bearer {{auth_token}}
+
+
+### 3 Sequence
+# curl -H "Authorization: Bearer YOUR_TOKEN"
+#  GET http://localhost:8081/api/messages
+# Lire des messages (scope: message.read)
+GET http://localhost:8080/api/messages
+Authorization: Bearer {{auth_token}}
+
+> {%
+    const tokenExpiresAt = client.global.get("token_expires_at");
+    const now = Date.now();
+
+    if (tokenExpiresAt && now > tokenExpiresAt) {
+        client.log("⚠️ Token expiré ! Veuillez le renouveler.");
+    } else {
+        client.log("✅ Token encore valide");
+    }
+%}
+
+### 4. Créer un message (POST)
+POST http://localhost:9000/api/messages
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "content": "Mon premier message de test !"
+}
+
+###
+### 4. Lire tous les messages
+GET http://localhost:9000/api/messages
+Authorization: Bearer {{auth_token}}
+
+
+### 5. Lire un message spécifique
+GET http://localhost:9000/api/messages/1
+Authorization: Bearer {{auth_token}}
+
+
+
+### 6. Mettre à jour un message
+PUT http://localhost:9000/api/messages/1
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "content": "Message mis à jour !"
+}
+
+### 7. Supprimer un message
+DELETE http://localhost:9000/api/messages/2
+Authorization: Bearer {{auth_token}}
+
+### 8. Voir le profil utilisateur
+GET http://localhost:9000/api/profile
+Authorization: Bearer {{auth_token}}
+
+### 9. Test avec header Authorization
+POST http://localhost:9000/api/test-token
+Authorization: Bearer {{auth_token}}
+
+
+
+

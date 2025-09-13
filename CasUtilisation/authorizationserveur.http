@@ -1,0 +1,129 @@
+### Variables globales
+### echo -n "messaging-client:secret" | base64
+###     Réponse: bWVzc2FnaW5nLWNsaWVudDpzZWNyZXQ=
+@clientId = messaging-client
+@clientSecret = secret
+@clientsecretencryptbase64 = bWVzc2FnaW5nLWNsaWVudDpzZWNyZXQ=
+@basicAuth = Basic
+
+### 1. Obtenir un token avec Client Credentials
+# @no-cookie-jar
+POST http://localhost:8080/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {{clientsecretencryptbase64}}
+
+grant_type=client_credentials&scope=message.read message.write
+
+{%
+    client.test("Request executed successfully", function() {
+    client.assert(response.status === 200, "Response status is not 200");
+    });
+    client.test("Token received", function() {
+        client.assert(response.body.access_token, "No access token in response");
+    });
+%}
+
+### 2. Démarrer le flux d'autorisation (Authorization Code Flow)
+GET http://localhost:8080/oauth2/authorize?
+    response_type=code
+    &client_id=messaging-client
+    &redirect_uri=http://127.0.0.1:8080/authorized
+    &scope=openid profile message.read
+    &state=xyz
+
+### 3. Device Flow - Demande de code appareil
+POST http://localhost:8080/oauth2/device_authorization
+Content-Type: application/x-www-form-urlencoded
+
+client_id=device-messaging-client&scope=message.read%20message.write
+
+> {%
+    client.global.set("device_code", response.body.device_code);
+    client.global.set("user_code", response.body.user_code);
+    client.log("User Code: " + response.body.user_code);
+    client.log("Aller sur: " + response.body.verification_uri);
+    client.log("Ou aller directement sur: " + response.body.verification_uri_complete);
+%}
+
+### 4. Token Exchange
+POST http://localhost:8080/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {{clientsecretencryptbase64}}
+
+grant_type=urn:ietf:params:oauth:grant-type:token-exchange&subject_token="YOUR_TOKEN"&scope=message.read
+
+### 5. Vérifier les informations utilisateur (nécessite un token valide)
+GET http://localhost:8080/userinfo
+Authorization: Bearer {{auth_token}}
+
+### 6. Test de la page d'activation de l'appareil
+GET http://localhost:8080/activate
+
+### Utiliser le token obtenu
+GET http://localhost:8080/userinfo
+Authorization: Bearer {{auth_token}}
+
+### 1. Rediriger l'utilisateur vers l'endpoint d'autorisation
+### A faire via le BROWSER
+GET http://localhost:9000/oauth2/authorize?response_type=code&client_id=messaging-client&redirect_uri=http://127.0.0.1:8080/login/oauth2/code/messaging-client-oidc&scope=openid%20message.read%20message.write
+
+### 2. Après consentement, échanger le code contre un token
+POST http://localhost:9000/oauth2/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {{clientsecretencryptbase64}}
+
+grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=http://127.0.0.1:8080/login/oauth2/code/messaging-client-oidc
+> {%
+    client.test("Token obtenu", function() {
+        client.assert(response.status === 200, "Status should be 200");
+        client.assert(response.body.access_token, "Token should exist");
+    });
+
+    if (response.body.access_token) {
+        client.global.set("auth_token", response.body.access_token);
+        client.log("✅ Nouveau token sauvegardé");
+    }
+%}
+
+
+###
+# curl -X POST http://localhost:9000/oauth2/token
+#  -H "Content-Type: application/x-www-form-urlencoded"
+#  -u "messaging-client:secret"
+#  -d "grant_type=client_credentials&scope=message.read message.write
+# echo -n "messaging-client:secret" | base64
+POST http://localhost:9000/oauth2/token
+Authorization: Basic {{clientsecretencryptbase64}}
+Content-Type: application/x-www-form-urlencoded
+
+grant_type = client_credentials&scope = message.read message.write
+
+> {%
+    client.test("Token obtenu", function() {
+        client.assert(response.status === 200, "Status should be 200");
+        client.assert(response.body.access_token, "Token should exist");
+    });
+
+    if (response.body.access_token) {
+        client.global.set("auth_token", response.body.access_token);
+        client.log("✅ Nouveau token sauvegardé");
+    }
+%}
+
+###
+# curl -X POST http://localhost:9000/oauth2/introspect
+#  -u "messaging-client:secret"
+#  -d "token=YOUR_JWT_TOKEN"
+POST http://localhost:9000/oauth2/introspect
+Authorization: Basic {{clientsecretencryptbase64}}
+Content-Type: application/x-www-form-urlencoded
+
+token = {{auth_token}}
+
+###
+
+
+
+
+
+
