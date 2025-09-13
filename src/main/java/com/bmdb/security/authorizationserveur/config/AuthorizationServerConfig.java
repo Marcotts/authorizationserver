@@ -95,7 +95,7 @@ public class AuthorizationServerConfig {
 
 		// @formatter:off
 		http
-			.securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+			.securityMatcher(authorizationServerConfigurer.getEndpointsMatcher()).csrf(csrf -> csrf.disable())
 			.with(authorizationServerConfigurer, (authorizationServer) ->
 				authorizationServer
 					.deviceAuthorizationEndpoint(deviceAuthorizationEndpoint ->

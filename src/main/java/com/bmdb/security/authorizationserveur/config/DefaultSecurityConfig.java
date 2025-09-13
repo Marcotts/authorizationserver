@@ -36,14 +36,17 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 @Configuration(proxyBeanMethods = false)
 public class DefaultSecurityConfig {
 
-	// @formatter:off
+    // @formatter:off
 	@Bean
 	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
 		http
+			.csrf(csrf -> csrf
+					.ignoringRequestMatchers("/oauth2/**") // Ignorer CSRF pour les endpoints OAuth2
+			)
 			.authorizeHttpRequests(authorize ->
-				authorize
-					.requestMatchers("/", "/error","/assets/**", "/login").permitAll()
-					.anyRequest().authenticated()
+			authorize
+				.requestMatchers("/", "/error","/assets/**", "/login").permitAll()
+				.anyRequest().authenticated()
 			)
 			.formLogin(formLogin ->
 				formLogin
@@ -59,11 +62,11 @@ public class DefaultSecurityConfig {
 	}
 	// @formatter:on
 
-	private AuthenticationSuccessHandler authenticationSuccessHandler() {
-		return new FederatedIdentityAuthenticationSuccessHandler();
-	}
+    private AuthenticationSuccessHandler authenticationSuccessHandler() {
+        return new FederatedIdentityAuthenticationSuccessHandler();
+    }
 
-	// @formatter:off
+    // @formatter:off
 	@Bean
 	public UserDetailsService users() {
 		UserDetails user = User.withDefaultPasswordEncoder()
@@ -75,14 +78,14 @@ public class DefaultSecurityConfig {
 	}
 	// @formatter:on
 
-	@Bean
-	public SessionRegistry sessionRegistry() {
-		return new SessionRegistryImpl();
-	}
+    @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
 
-	@Bean
-	public HttpSessionEventPublisher httpSessionEventPublisher() {
-		return new HttpSessionEventPublisher();
-	}
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
+    }
 
 }
