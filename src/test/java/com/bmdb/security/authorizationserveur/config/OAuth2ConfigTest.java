@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles("test") // Utilisez un profil de test si nécessaire
 public class OAuth2ConfigTest {
 
+
+
     @Autowired
     private Environment environment;
 
