@@ -43,6 +43,7 @@ public final class DeviceClientAuthenticationProvider implements AuthenticationP
 		this.registeredClientRepository = registeredClientRepository;
 	}
 
+
 	@Override
 	public Authentication authenticate(Authentication authentication) throws AuthenticationException {
 		DeviceClientAuthenticationToken deviceClientAuthentication =
